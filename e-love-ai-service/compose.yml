@@ -10,7 +10,7 @@ services:
       - "3000:3001"
     env_file:
       - .env
-      - .docker/app.env
+      - docker/app.env
     volumes:
       - type: bind
         source: ./src
@@ -27,6 +27,10 @@ services:
       - type: bind
         source: ./utils
         target: /app/utils
+      - type: bind
+        source: ./main.py
+        target: /app/main.py
+
     networks:
       - e-love-network
 

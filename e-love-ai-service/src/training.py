@@ -1,8 +1,10 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
+from sklearn.model_selection import train_test_split
+
+# all_categories =
 
 
 def one_hot_encode(df, categories_column, all_categories) -> pd.DataFrame:
@@ -28,7 +30,8 @@ def one_hot_encode(df, categories_column, all_categories) -> pd.DataFrame:
     return pd.concat([df.drop(columns=[categories_column]), one_hot], axis=1)
 
 
-def train_model(df, all_categories) -> RandomForestClassifier:
+# TODO: make this func async or no?
+async def train_model(df: pd.DataFrame, all_categories: list) -> RandomForestClassifier:
     """
     Trains a random forest classifier on the given dataframe.
     params:
@@ -38,7 +41,6 @@ def train_model(df, all_categories) -> RandomForestClassifier:
             A list of all possible categories
     returns:
         RandomForestClassifier: The trained random forest classifier
-    # TODO: разобраться в коде
     """
     # TODO: refactor - magic numbers (0.15, 42)
     negatives = df[df["liked"] == 0].sample(frac=0.15, random_state=42)

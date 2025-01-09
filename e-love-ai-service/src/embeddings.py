@@ -1,6 +1,6 @@
 import torch
 from sentence_transformers import SentenceTransformer, util
-from transformers import BertTokenizer, BertModel
+from transformers import BertModel, BertTokenizer
 
 # Initialize models
 # TODO: refactor - magic strings (put them in config)

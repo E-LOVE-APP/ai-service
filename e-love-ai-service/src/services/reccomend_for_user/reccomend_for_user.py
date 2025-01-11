@@ -2,8 +2,9 @@ from uuid import UUID
 
 from fastapi import HTTPException
 
-from main import app
-from src.recomendations import generate_user_vector, recommend_partners, extract_keywords
+from config.app_instance import app
+from src.recomendations import (extract_keywords, generate_user_vector,
+                                recommend_partners)
 
 
 class ReccomendUsersService:

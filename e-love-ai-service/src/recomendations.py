@@ -6,8 +6,8 @@ import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_extraction.text import TfidfVectorizer
 
-from embeddings import text_similarity_sbert
-from inference import predict_with_model
+from src.embeddings import text_similarity_sbert
+from src.inference import predict_with_model
 from src.types.user.user_type import User
 
 logging.basicConfig(level=logging.INFO)

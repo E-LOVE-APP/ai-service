@@ -1,7 +1,9 @@
 from fastapi import APIRouter
-from src.services.reccomend_for_user.reccomend_for_user import ReccomendUsersService
 
-api_router = APIRouter(
+from src.services.reccomend_for_user.reccomend_for_user import \
+    ReccomendUsersService
+
+router = APIRouter(
     prefix="/matching-recommendations",
 )
 

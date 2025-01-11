@@ -1,12 +1,12 @@
 import io
+import os
 import pickle
 
 import pandas as pd
 from fastapi import APIRouter, Depends, File, UploadFile
 
-from main import app
-
-from src.training import train_model, one_hot_encode
+from config.app_instance import app
+from src.training import one_hot_encode, train_model
 
 router = APIRouter(
     prefix="/upload-dataset",
@@ -20,7 +20,7 @@ DATAFRAME_PATH = os.getenv("DATAFRAME_PATH")
     "/",
     tags=["Get users data"],
 )
-async def upload_users_dataset(file: UploadFile = File(...)) -> GetUsersDataResponse:
+async def upload_users_dataset(file: UploadFile = File(...)):
     """
     Uploads the dataset of users and trains the model. Used for and with Prefect flows. (each day data extraction)
     params:

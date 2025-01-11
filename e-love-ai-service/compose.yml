@@ -8,6 +8,7 @@ services:
     container_name: e-love-ai-service
     ports:
       - "3000:3001"
+
     env_file:
       - .env
       - docker/app.env
@@ -18,6 +19,12 @@ services:
       - type: bind
         source: ./config
         target: /app/config
+      - type: bind
+        source: ./models
+        target: /app/models
+      - type: bind
+        source: ./data
+        target: /app/data
       - type: bind
         source: ./docker
         target: /app/docker
@@ -30,7 +37,8 @@ services:
       - type: bind
         source: ./main.py
         target: /app/main.py
-
+    command: >
+      - bash -c "python main.py"
     networks:
       - e-love-network
 

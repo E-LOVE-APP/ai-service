@@ -57,5 +57,5 @@ async def upload_users_dataset(file: UploadFile = File(...)) -> GetUsersDataResp
         app.state.all_users_df = df
 
         return {"detail": f"Dataset uploaded, model retrained with accuracy={accuracy}"}
-    except:
+    except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

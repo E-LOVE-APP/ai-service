@@ -31,7 +31,7 @@ def one_hot_encode(df, categories_column, all_categories) -> pd.DataFrame:
 
 
 # TODO: make this func async or no?
-async def train_model(df: pd.DataFrame, all_categories: list) -> RandomForestClassifier:
+def train_model(df: pd.DataFrame, all_categories: list) -> RandomForestClassifier:
     """
     Trains a random forest classifier on the given dataframe.
     params:

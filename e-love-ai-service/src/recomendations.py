@@ -33,7 +33,7 @@ async def generate_user_vector(user_categories: list, all_categories: list) -> p
         pd.DataFrame: A DataFrame with the user vector
     """
     try:
-        return await pd.DataFrame(
+        return pd.DataFrame(
             [[int(cat in user_categories) for cat in all_categories]],
             columns=all_categories,
         )
@@ -42,7 +42,7 @@ async def generate_user_vector(user_categories: list, all_categories: list) -> p
         logger.error(f"Error in generation user vector: {e}")
 
 
-async def extract_keywords(user_description: str, corpus: list, top_n: int = 5) -> dict:
+def extract_keywords(user_description: str, corpus: list, top_n: int = 5) -> dict:
     """
     Extracts the top keywords from the user description.
     params:
@@ -56,9 +56,9 @@ async def extract_keywords(user_description: str, corpus: list, top_n: int = 5) 
         dict: A dictionary of keywords and their TF-IDF scores
     """
     try:
-        vectorizer = await TfidfVectorizer(stop_words="english", max_features=5000)
-        tfidf_matrix = await vectorizer.fit_transform([user_description] + corpus)
-        feature_names = await vectorizer.get_feature_names_out()
+        vectorizer = TfidfVectorizer(stop_words="english", max_features=5000)
+        tfidf_matrix = vectorizer.fit_transform([user_description] + corpus)
+        feature_names = vectorizer.get_feature_names_out()
 
         # TODO: это просто пиздец а не код!
         user_tfidf = tfidf_matrix[0].toarray()[0]
@@ -70,7 +70,7 @@ async def extract_keywords(user_description: str, corpus: list, top_n: int = 5) 
         logger.error(f"Error in extracting keywords: {e}")
 
 
-async def recommend_partners(
+def recommend_partners(
     model: RandomForestClassifier,
     other_users_df: pd.DataFrame,
     current_user_vector: pd.DataFrame,

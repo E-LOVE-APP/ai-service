@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 
 from config.config import settings
 from easter_eggs.greeting import ascii_hello, ascii_hello_devs
+from src.api.v1.router.router import api_router
 
 logging.basicConfig(level=logging.INFO)
 logging.info("Starting e-love-ai-service")
@@ -23,6 +24,8 @@ app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
 )
+
+app.include_router(api_router)
 
 
 @app.on_event("startup")

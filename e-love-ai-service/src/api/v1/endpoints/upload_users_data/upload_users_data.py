@@ -5,7 +5,7 @@ import pandas as pd
 from fastapi import APIRouter, Depends, File, UploadFile
 
 from main import app
-from src.schemas.get_users_data_schema.get_users_data_schema import GetUsersDataResponse
+
 from src.training import train_model, one_hot_encode
 
 router = APIRouter(
@@ -18,17 +18,11 @@ DATAFRAME_PATH = os.getenv("DATAFRAME_PATH")
 
 @router.post(
     "/",
-    response_model=GetUsersDataResponse,
-    responses={
-        200: {"description": "Get users data successfully", "model": GetUsersDataResponse},
-        400: {"description": "Bad request"},
-        500: {"description": "Internal server error"},
-    },
     tags=["Get users data"],
 )
 async def upload_users_dataset(file: UploadFile = File(...)) -> GetUsersDataResponse:
     """
-    Uploads the dataset of users and trains the model.
+    Uploads the dataset of users and trains the model. Used for and with Prefect flows. (each day data extraction)
     params:
         file: UploadFile
             The file containing the dataset

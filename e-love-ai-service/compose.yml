@@ -1,0 +1,42 @@
+services:
+  e-love-ai-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        INSTALL_DEV: "true"
+    container_name: e-love-ai-service
+    ports:
+      - "3001:3000"
+
+    env_file:
+      - .env
+      - ./docker/app.env
+    volumes:
+      - type: bind
+        source: ./src
+        target: /app/src
+      - type: bind
+        source: ./config
+        target: /app/config
+      - type: bind
+        source: ./models
+        target: /app/models
+      - type: bind
+        source: ./data
+        target: /app/data
+      - type: bind
+        source: ./docker
+        target: /app/docker
+      - type: bind
+        source: ./scripts
+        target: /app/scripts
+      - type: bind
+        source: ./main.py
+        target: /app/main.py
+    networks:
+      - e-love-network
+
+networks:
+  e-love-network:
+    external: true

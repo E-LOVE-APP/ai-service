@@ -1,6 +1,6 @@
 import torch
 from sentence_transformers import SentenceTransformer, util
-from transformers import BertTokenizer, BertModel
+from transformers import BertModel, BertTokenizer
 
 # Initialize models
 # TODO: refactor - magic strings (put them in config)
@@ -44,15 +44,19 @@ def weighted_sbert_embeddings(texts, keywords=None):
     params:
         texts: list
             A list of texts to get embeddings for
-        keywords: list
-            A list of keywords to use for weighting the embeddings
+        keywords: dict
+            A dictionary of keywords and their weights for weighting the embeddings
     returns:
         torch.Tensor: The weighted SBERT embeddings for the given texts
     """
+    # Получаем базовые эмбеддинги для всех текстов
+    embeddings = sbert_model.encode(texts, convert_to_tensor=True)
+
     if keywords:
         for idx, text in enumerate(texts):
             for keyword, weight in keywords.items():
                 if keyword.lower() in text.lower():
+                    # Увеличиваем эмбеддинг для текста с найденным ключевым словом
                     embeddings[idx] += weight * embeddings[idx]
 
     return embeddings

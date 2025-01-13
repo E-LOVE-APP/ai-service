@@ -1,11 +1,27 @@
+import logging
+from typing import List
+
 import numpy as np
 import pandas as pd
-from inference import predict_with_model
-from embeddings import text_similarity_sbert
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_extraction.text import TfidfVectorizer
 
+from src.embeddings import text_similarity_sbert
+from src.inference import predict_with_model
+from src.types.user.user_type import User
 
-def generate_user_vector(user_categories, all_categories):
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+"""
+This module contains the functions for generating user vectors, extracting keywords from user descriptions, and recommending partners. 
+"""
+
+
+# TODO: refactor:
+# 1. User categories - whom categories? categories of the current user or an absolute random user?
+# 2. All categories param - isn't it better to extract it as an external state (class/type) and just re-use it here, instead of always re-creating it?
+def generate_user_vector(user_categories: list, all_categories: list) -> pd.DataFrame:
     """
     Generates a user vector based on the categories they like.
     params:
@@ -16,13 +32,17 @@ def generate_user_vector(user_categories, all_categories):
     returns:
         pd.DataFrame: A DataFrame with the user vector
     """
-    return pd.DataFrame(
-        [[int(cat in user_categories) for cat in all_categories]],
-        columns=all_categories,
-    )
+    try:
+        return pd.DataFrame(
+            [[int(cat in user_categories) for cat in all_categories]],
+            columns=all_categories,
+        )
+    except Exception as e:
+        print(f"Error in generation user vector: {e}")
+        logger.error(f"Error in generation user vector: {e}")
 
 
-def extract_keywords(user_description, corpus, top_n=5):
+def extract_keywords(user_description: str, corpus: list, top_n: int = 5) -> dict:
     """
     Extracts the top keywords from the user description.
     params:
@@ -35,52 +55,71 @@ def extract_keywords(user_description, corpus, top_n=5):
     returns:
         dict: A dictionary of keywords and their TF-IDF scores
     """
-    vectorizer = TfidfVectorizer(stop_words="english", max_features=5000)
-    tfidf_matrix = vectorizer.fit_transform([user_description] + corpus)
-    feature_names = vectorizer.get_feature_names_out()
+    try:
+        vectorizer = TfidfVectorizer(stop_words="english", max_features=5000)
+        tfidf_matrix = vectorizer.fit_transform([user_description] + corpus)
+        feature_names = vectorizer.get_feature_names_out()
 
-    user_tfidf = tfidf_matrix[0].toarray()[0]
-    top_indices = user_tfidf.argsort()[-top_n:][::-1]
-    keywords = {feature_names[i]: user_tfidf[i] for i in top_indices if user_tfidf[i] > 0}
-    return keywords
+        # TODO: это просто пиздец а не код!
+        user_tfidf = tfidf_matrix[0].toarray()[0]
+        top_indices = user_tfidf.argsort()[-top_n:][::-1]
+        keywords = {feature_names[i]: user_tfidf[i] for i in top_indices if user_tfidf[i] > 0}
+        return keywords
+    except Exception as e:
+        print(f"Error in extracting keywords: {e}")
+        logger.error(f"Error in extracting keywords: {e}")
 
 
 def recommend_partners(
-    model,
-    new_users_df,
-    current_user_vector,
-    current_user_description,
-    new_descriptions,
-    keywords=None,
-):
+    model: RandomForestClassifier,
+    other_users_df: pd.DataFrame,
+    current_user_vector: pd.DataFrame,
+    current_user_description: str,
+    other_descriptions: list,
+    keywords: str = None,
+) -> List[User]:
     """
     Predicts the top 10 partners for the current user.
     params:
         model: RandomForestClassifier
             The trained model to use for prediction
-        new_users_df: pd.DataFrame
-            The new users to predict on
+        other_users_df: pd.DataFrame
+            The other set of users to predict on (+10 next)
         current_user_vector: pd.DataFrame
             The vector of the current user
         current_user_description: str
             The description of the current user
-        new_descriptions: list
-            A list of descriptions of the new users
+        other_descriptions: list
+            A list of descriptions of the other users
         keywords: dict
             A dictionary of keywords and their weights for weighting the embeddings
     returns:
         list: The top 10 partners for the current user
     """
-    # TODO: refactor - magic numbers (0.5, 10); срез; лямбда
-    cat_probabilities = predict_with_model(model, new_users_df)
-    text_sims = text_similarity_sbert(current_user_description, new_descriptions, keywords)
+    try:
+        # TODO: refactor - magic numbers (0.5, 10); срез; лямбда
+        # Определяем список признаков на основе current_user_vector (он создаётся с теми же столбцами)
+        feature_cols = current_user_vector.columns.tolist()
 
-    final_scores = 0.5 * cat_probabilities + 0.5 * np.array(text_sims)
+        # Отбираем только те столбцы из other_users_df, которые соответствуют признакам
+        features = other_users_df[feature_cols]
 
-    combined = [
-        (idx, cp, ts, fs)
-        for idx, cp, ts, fs in zip(new_users_df.index, cat_probabilities, text_sims, final_scores)
-    ]
-    sorted_combined = sorted(combined, key=lambda x: x[3], reverse=True)
+        # Используем отфильтрованный DataFrame для предсказания
+        cat_probabilities = predict_with_model(model, features)
 
-    return sorted_combined[:10]
+        text_sims = text_similarity_sbert(current_user_description, other_descriptions, keywords)
+
+        final_scores = 0.5 * cat_probabilities + 0.5 * np.array(text_sims)
+
+        combined = [
+            (idx, cp, ts, fs)
+            for idx, cp, ts, fs in zip(
+                other_users_df.index, cat_probabilities, text_sims, final_scores
+            )
+        ]
+        sorted_combined = sorted(combined, key=lambda x: x[3], reverse=True)
+
+        return sorted_combined[:10]
+    except Exception as e:
+        print(f"Error in recommending partners: {e}")
+        logger.error(f"Error in recommending partners: {e}")

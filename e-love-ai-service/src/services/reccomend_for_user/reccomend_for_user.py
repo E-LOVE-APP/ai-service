@@ -1,73 +1,81 @@
-from uuid import UUID
-
 from fastapi import HTTPException
-
-from config.app_instance import app
-from src.recomendations import (extract_keywords, generate_user_vector,
-                                recommend_partners)
+from src.recomendations import extract_keywords, generate_user_vector, recommend_partners
 
 
 class ReccomendUsersService:
-    def __init__(self):
-        self.rf_model = app.state.model
-        self.df_all_users = app.state.df_all_users
-        self.all_categories = app.state.all_categories
+    """
+    Service that uses a pre-learned model, dataframe with all users information,
+    and categories information from our main business logic.
+    """
+
+    def __init__(self, rf_model, df_all_users, all_categories):
+        self.rf_model = rf_model
+        self.df_all_users = df_all_users
+        self.all_categories = all_categories
 
     async def reccomend_users(self, current_user_data: dict) -> list:
-        """
-        Reccomends users to the current user based on their data.
-        params:
-            current_user_data: dict
-                The data of the current user
-        returns:
-            list: The list of reccomendations and their scores in percentage
-        raises:
-            HTTPException: If the model is not trained
-        """
         if not self.rf_model:
-            raise HTTPException(status_code=400, detail="Model is not trained", all_categories=...)
+            raise HTTPException(status_code=400, detail="Model is not trained")
         try:
             if self.rf_model is None or self.df_all_users is None:
                 raise HTTPException(400, "No model or df loaded. Please /upload-dataset first.")
 
-            user_id = data["user_id"]
-            user_description = data["description"]
-            user_categories = data["categories"]
-            viewed = data.get("viewed_users", [])
+            user_id = current_user_data["user_id"]
+            user_description = current_user_data["description"]
+            user_categories = current_user_data["categories"]
+            viewed = current_user_data.get("viewed_users", [])
 
-            # 1) генерим вектор
-            current_user_vector = generate_user_vector(user_categories, all_categories)
+            # Генерируем вектор для текущего пользователя
+            current_user_vector = generate_user_vector(user_categories, self.all_categories)
 
-            # 2) Фильтруем df_all, исключая viewed + самого user_id (если user_id есть в df) (ебать вот это синтаксис)
-            df_candidates = df_all[~df_all["user_id"].isin([user_id] + viewed)]
+            # Проверка наличия столбца 'candidate_user_id' и фильтрация DataFrame
+            if "candidate_user_id" not in self.df_all_users.columns:
+                raise HTTPException(400, "'candidate_user_id' column not found in dataframe")
+            df_candidates = self.df_all_users[
+                ~self.df_all_users["candidate_user_id"].isin([user_id] + viewed)
+            ]
 
-            # 3) берем other_descriptions
+            # Ограничим количество кандидатов (например, первыми 1000)
+            # df_candidates = df_candidates.head(10000)
+
+            # Берём описания других пользователей
             other_descriptions = df_candidates["description"].tolist()
 
+            top_n = 5  # задаем нужное значение
             keywords = extract_keywords(user_description, other_descriptions, top_n=top_n)
 
-            # 4) делаем recommend_partners
             recs = recommend_partners(
-                rf_model=rf_model,
+                model=self.rf_model,
                 other_users_df=df_candidates,
                 current_user_vector=current_user_vector,
-                current_user_description=user_descr,
+                current_user_description=user_description,
                 other_descriptions=other_descriptions,
                 keywords=keywords,
             )
 
-            # recs = [(idx, cat_score, text_score, final_score), ...] (зависит от вашей реализации)
             output = []
+            # for idx, cat_s, txt_s, fs in recs:
+            #     row = df_candidates.iloc[idx]
+            #     output.append(
+            #         {
+            #             "user_id": row["candidate_user_id"],
+            #             "cat_score": cat_s,
+            #             "text_score": txt_s,
+            #             "final_score": fs,
+            #         }
+            #     )
             for idx, cat_s, txt_s, fs in recs:
                 row = df_candidates.iloc[idx]
                 output.append(
                     {
-                        "user_id": row["user_id"],
-                        "cat_score": cat_s,
-                        "text_score": txt_s,
-                        "final_score": fs,
+                        "user_id": row["candidate_user_id"],
+                        "cat_score": float(cat_s),  # преобразование к float
+                        "text_score": float(txt_s),  # преобразование к float
+                        "final_score": float(fs),  # преобразование к float
                     }
                 )
+
+            print("output_data: ", output)
             return output
-        except:
-            raise HTTPException(status_code=500, detail="Internal server error")
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=str(e))

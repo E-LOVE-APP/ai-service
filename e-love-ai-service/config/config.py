@@ -11,10 +11,10 @@ print(f"Loaded environment variables from {os.getenv('APP_ENV_PATH')}")
 
 
 class Settings(BaseSettings):
-    app_name: str
-    app_version: str
-    app_running_env: str
-    greeting_message: str
+    APP_NAME: str
+    APP_VERSION: str
+    APP_RUNNING_ENV: str
+    GREETING_MESSAGE: str
 
     class Config:
         env_file = os.getenv("APP_ENV_PATH")

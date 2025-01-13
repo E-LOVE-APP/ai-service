@@ -21,7 +21,7 @@ This module contains the functions for generating user vectors, extracting keywo
 # TODO: refactor:
 # 1. User categories - whom categories? categories of the current user or an absolute random user?
 # 2. All categories param - isn't it better to extract it as an external state (class/type) and just re-use it here, instead of always re-creating it?
-async def generate_user_vector(user_categories: list, all_categories: list) -> pd.DataFrame:
+def generate_user_vector(user_categories: list, all_categories: list) -> pd.DataFrame:
     """
     Generates a user vector based on the categories they like.
     params:
@@ -98,15 +98,23 @@ def recommend_partners(
     """
     try:
         # TODO: refactor - magic numbers (0.5, 10); срез; лямбда
-        cat_probabilities = predict_with_model(model, new_users_df)
-        text_sims = text_similarity_sbert(current_user_description, new_descriptions, keywords)
+        # Определяем список признаков на основе current_user_vector (он создаётся с теми же столбцами)
+        feature_cols = current_user_vector.columns.tolist()
+
+        # Отбираем только те столбцы из other_users_df, которые соответствуют признакам
+        features = other_users_df[feature_cols]
+
+        # Используем отфильтрованный DataFrame для предсказания
+        cat_probabilities = predict_with_model(model, features)
+
+        text_sims = text_similarity_sbert(current_user_description, other_descriptions, keywords)
 
         final_scores = 0.5 * cat_probabilities + 0.5 * np.array(text_sims)
 
         combined = [
             (idx, cp, ts, fs)
             for idx, cp, ts, fs in zip(
-                new_users_df.index, cat_probabilities, text_sims, final_scores
+                other_users_df.index, cat_probabilities, text_sims, final_scores
             )
         ]
         sorted_combined = sorted(combined, key=lambda x: x[3], reverse=True)

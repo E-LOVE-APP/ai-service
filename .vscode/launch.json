@@ -1,0 +1,11 @@
+{
+  "configurations": [
+    {
+      "type": "debugpy",
+      "request": "launch",
+      "name": "Launch Main",
+      "program": "${workspaceFolder}/e-love-ai-service/main.py",
+      "console": "integratedTerminal"
+    }
+  ]
+}

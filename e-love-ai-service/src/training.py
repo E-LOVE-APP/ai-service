@@ -4,8 +4,6 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
 
-# all_categories =
-
 
 def one_hot_encode(df, categories_column, all_categories) -> pd.DataFrame:
     """
@@ -42,6 +40,7 @@ def train_model(df: pd.DataFrame, all_categories: list) -> RandomForestClassifie
     returns:
         RandomForestClassifier: The trained random forest classifier
     """
+    print("I'm in the start of train_model method")
     # TODO: refactor - magic numbers (0.15, 42)
     negatives = df[df["liked"] == 0].sample(frac=0.15, random_state=42)
     training_df = pd.concat([df[df["liked"] == 1], negatives], ignore_index=True)

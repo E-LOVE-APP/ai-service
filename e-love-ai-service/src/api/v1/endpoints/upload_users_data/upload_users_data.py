@@ -1,11 +1,12 @@
+import ast
 import io
 import os
 import pickle
 
 import pandas as pd
-from fastapi import APIRouter, Depends, File, UploadFile
+from fastapi import (APIRouter, Depends, File, HTTPException, Request,
+                     UploadFile)
 
-from config.app_instance import app
 from src.training import one_hot_encode, train_model
 
 router = APIRouter(
@@ -20,7 +21,7 @@ DATAFRAME_PATH = os.getenv("DATAFRAME_PATH")
     "/",
     tags=["Get users data"],
 )
-async def upload_users_dataset(file: UploadFile = File(...)):
+async def upload_users_dataset(request: Request, file: UploadFile = File(...)):
     """
     Uploads the dataset of users and trains the model. Used for and with Prefect flows. (each day data extraction)
     params:
@@ -30,25 +31,28 @@ async def upload_users_dataset(file: UploadFile = File(...)):
         GetUsersDataResponse: The response containing the accuracy of the model
     """
     # TODO: For @Neeplc -> PLEASE MOVE THE CODE BELOW TO A SEPARATE SERVICE!
+    print("MODEL_PATH:", MODEL_PATH)
+    print("DATAFRAME_PATH:", DATAFRAME_PATH)
     try:
         content = await file.read()
-        df = pd.read_csv(content.decode("utf-8"))
+        csv_text = content.decode("utf-8")
+        df = pd.read_csv(io.StringIO(csv_text))
 
-        all_categories = app.state.all_categories
+        all_categories = request.app.state.all_categories
 
         df = one_hot_encode(df, "categories", all_categories)
 
-        # Train model
+        # <-- TRAIN MODEL -->
         rf_model, accuracy = train_model(df, all_categories=all_categories)
 
         with open(MODEL_PATH, "wb") as file:
             pickle.dump(rf_model, file)
 
-        app.state.model = rf_model
-
         with open(DATAFRAME_PATH, "wb") as file:
             pickle.dump(df, file)
-        app.state.all_users_df = df
+
+        request.app.state.model = rf_model
+        request.app.state.all_users_df = df
 
         return {"detail": f"Dataset uploaded, model retrained with accuracy={accuracy}"}
     except Exception as e:

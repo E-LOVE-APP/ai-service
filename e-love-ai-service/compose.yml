@@ -4,14 +4,14 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        - INSTALL_DEV = "true"
+        INSTALL_DEV: "true"
     container_name: e-love-ai-service
     ports:
-      - "3000:3001"
+      - "3001:3000"
 
     env_file:
       - .env
-      - docker/app.env
+      - ./docker/app.env
     volumes:
       - type: bind
         source: ./src
@@ -32,13 +32,8 @@ services:
         source: ./scripts
         target: /app/scripts
       - type: bind
-        source: ./utils
-        target: /app/utils
-      - type: bind
         source: ./main.py
         target: /app/main.py
-    command: >
-      - bash -c "python main.py"
     networks:
       - e-love-network
 

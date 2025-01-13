@@ -23,6 +23,8 @@ python-dotenv = "^1.0.1"
 isort = "^5.13.2"
 pydantic-settings = "^2.7.1"
 python-multipart = "^0.0.20"
+aiofiles = "^24.1.0"
+asyncio = "^3.4.3"
 
 
 [build-system]

@@ -36,7 +36,7 @@ class ReccomendUsersService:
             ]
 
             # Ограничим количество кандидатов (например, первыми 1000)
-            # df_candidates = df_candidates.head(10000)
+            df_candidates = df_candidates.head(10000)
 
             # Берём описания других пользователей
             other_descriptions = df_candidates["description"].tolist()
@@ -52,6 +52,8 @@ class ReccomendUsersService:
                 other_descriptions=other_descriptions,
                 keywords=keywords,
             )
+
+            print("recs: ", recs)
 
             output = []
             # for idx, cat_s, txt_s, fs in recs:

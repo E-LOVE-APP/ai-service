@@ -4,8 +4,7 @@ import os
 import pickle
 
 import pandas as pd
-from fastapi import (APIRouter, Depends, File, HTTPException, Request,
-                     UploadFile)
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 
 from src.training import one_hot_encode, train_model
 
@@ -37,6 +36,13 @@ async def upload_users_dataset(request: Request, file: UploadFile = File(...)):
         content = await file.read()
         csv_text = content.decode("utf-8")
         df = pd.read_csv(io.StringIO(csv_text))
+
+        if "categories" in df.columns:
+            df["categories"] = df["categories"].apply(lambda x: ast.literal_eval(x))
+        else:
+            raise HTTPException(
+                status_code=400, detail="'categories' column not found in the dataset"
+            )
 
         all_categories = request.app.state.all_categories
 

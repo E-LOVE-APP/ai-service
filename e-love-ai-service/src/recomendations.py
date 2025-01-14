@@ -5,6 +5,8 @@ import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+
 
 from src.embeddings import text_similarity_sbert
 from src.inference import predict_with_model
@@ -70,56 +72,112 @@ def extract_keywords(user_description: str, corpus: list, top_n: int = 5) -> dic
         logger.error(f"Error in extracting keywords: {e}")
 
 
+from sklearn.metrics.pairwise import cosine_similarity
+
+
 def recommend_partners(
     model: RandomForestClassifier,
     other_users_df: pd.DataFrame,
     current_user_vector: pd.DataFrame,
     current_user_description: str,
     other_descriptions: list,
-    keywords: str = None,
-) -> List[User]:
-    """
-    Predicts the top 10 partners for the current user.
-    params:
-        model: RandomForestClassifier
-            The trained model to use for prediction
-        other_users_df: pd.DataFrame
-            The other set of users to predict on (+10 next)
-        current_user_vector: pd.DataFrame
-            The vector of the current user
-        current_user_description: str
-            The description of the current user
-        other_descriptions: list
-            A list of descriptions of the other users
-        keywords: dict
-            A dictionary of keywords and their weights for weighting the embeddings
-    returns:
-        list: The top 10 partners for the current user
-    """
+    keywords: dict = None,
+) -> List[dict]:
     try:
-        # TODO: refactor - magic numbers (0.5, 10); срез; лямбда
-        # Определяем список признаков на основе current_user_vector (он создаётся с теми же столбцами)
+        # Определяем список признаков на основе current_user_vector
         feature_cols = current_user_vector.columns.tolist()
-
-        # Отбираем только те столбцы из other_users_df, которые соответствуют признакам
         features = other_users_df[feature_cols]
 
-        # Используем отфильтрованный DataFrame для предсказания
+        # Предсказанные вероятности по категориям для кандидатов
         cat_probabilities = predict_with_model(model, features)
+        logger.info(f"cat_probabilities: {cat_probabilities[:5]}")  # Вывод первых 5 значений
 
+        # Вычисляем косинусное сходство между вектором текущего пользователя и кандидатами
+        candidate_vectors = features.values
+        user_vector = current_user_vector.values
+        similarities = cosine_similarity(candidate_vectors, user_vector).flatten()
+        logger.info(f"similarities: {similarities[:5]}")  # Первые 5 сходств
+
+        # Корректируем вероятности с учётом сходства
+        adjusted_cat_probabilities = cat_probabilities * similarities
+        logger.info(f"adjusted_cat_probabilities: {adjusted_cat_probabilities[:5]}")
+
+        # Вычисляем текстовую схожесть
         text_sims = text_similarity_sbert(current_user_description, other_descriptions, keywords)
+        logger.info(f"text_sims: {text_sims[:5]}")  # Первые 5 значений текстовой схожести
 
-        final_scores = 0.5 * cat_probabilities + 0.5 * np.array(text_sims)
+        # Финальный расчёт итоговых оценок
+        final_scores = 0.5 * adjusted_cat_probabilities + 0.5 * np.array(text_sims)
+        logger.info(f"final_scores: {final_scores[:5]}")
 
         combined = [
             (idx, cp, ts, fs)
             for idx, cp, ts, fs in zip(
-                other_users_df.index, cat_probabilities, text_sims, final_scores
+                other_users_df.index, adjusted_cat_probabilities, text_sims, final_scores
             )
         ]
         sorted_combined = sorted(combined, key=lambda x: x[3], reverse=True)
 
+        # Отладочный вывод топ-3 рекомендаций
+        logger.info(f"Top 3 recommendations: {sorted_combined[:3]}")
+
         return sorted_combined[:10]
     except Exception as e:
-        print(f"Error in recommending partners: {e}")
         logger.error(f"Error in recommending partners: {e}")
+        print(f"Error in recommending partners: {e}")
+        return []
+
+
+# def recommend_partners(
+#     model: RandomForestClassifier,
+#     other_users_df: pd.DataFrame,
+#     current_user_vector: pd.DataFrame,
+#     current_user_description: str,
+#     other_descriptions: list,
+#     keywords: str = None,
+# ) -> List[User]:
+#     """
+#     Predicts the top 10 partners for the current user.
+#     params:
+#         model: RandomForestClassifier
+#             The trained model to use for prediction
+#         other_users_df: pd.DataFrame
+#             The other set of users to predict on (+10 next)
+#         current_user_vector: pd.DataFrame
+#             The vector of the current user
+#         current_user_description: str
+#             The description of the current user
+#         other_descriptions: list
+#             A list of descriptions of the other users
+#         keywords: dict
+#             A dictionary of keywords and their weights for weighting the embeddings
+#     returns:
+#         list: The top 10 partners for the current user
+#     """
+#     try:
+#         # TODO: refactor - magic numbers (0.5, 10); срез; лямбда
+#         # Определяем список признаков на основе current_user_vector (он создаётся с теми же столбцами)
+#         feature_cols = current_user_vector.columns.tolist()
+
+#         # Отбираем только те столбцы из other_users_df, которые соответствуют признакам
+#         features = other_users_df[feature_cols]
+
+#         # Используем отфильтрованный DataFrame для предсказания
+#         cat_probabilities = predict_with_model(model, features)
+
+#         text_sims = text_similarity_sbert(current_user_description, other_descriptions, keywords)
+
+#         final_scores = 0.5 * cat_probabilities + 0.5 * np.array(text_sims)
+
+#         combined = [
+#             (idx, cp, ts, fs)
+#             for idx, cp, ts, fs in zip(
+#                 other_users_df.index, cat_probabilities, text_sims, final_scores
+#             )
+#         ]
+#         sorted_combined = sorted(combined, key=lambda x: x[3], reverse=True)
+
+#         return sorted_combined[:10]
+#     except Exception as e:
+#         print(f"Error in recommending partners: {e}")
+#         logger.error(f"Error in recommending partners: {e}")
